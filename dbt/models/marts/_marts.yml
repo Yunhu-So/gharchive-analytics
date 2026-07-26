@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: dim_repo
+    columns:
+      - name: repo_id
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_actor
+    columns:
+      - name: actor_id
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_date
+    columns:
+      - name: date_day
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_pr_review_latency
+    columns:
+      - name: repo_id
+        tests:
+          - not_null
+      - name: pr_number
+        tests:
+          - not_null
+      - name: opened_at
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - repo_id
+              - pr_number
+
+  - name: fct_repo_daily_activity
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - repo_id
+              - activity_date
+
+  - name: fct_contributor_cohorts
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - repo_id
+              - pr_author_id

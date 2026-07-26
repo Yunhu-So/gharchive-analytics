@@ -1,0 +1,9 @@
+version: 2
+
+seeds:
+  - name: known_bot_actors
+    columns:
+      - name: login
+        tests:
+          - unique
+          - not_null

@@ -13,9 +13,11 @@ clean-targets: ["target", "dbt_packages"]
 
 vars:
   marts_start_date: "2015-01-01"
+  bronze_path: "../bronze"
   bq_allow_dml: false
   pr_lifecycle_lookback_days: 90
   pr_lifecycle_max_age_days: 365
+  first_contributor_uncertainty_days: 90
 
 models:
   gharchive:

@@ -7,32 +7,16 @@ from datetime import datetime, timedelta
 import duckdb
 from airflow.decorators import task
 from airflow.sdk import DAG
-from airflow.models.pool import Pool
-
 from utils.constants import BRONZE_ASSET, BRONZE_ROOT, MAX_CONCURRENT_DOWNLOADS
 from utils.fetch import MissingHourError, fetch_hour
 
 logger = logging.getLogger(__name__)
 
+# created by airflow-init in docker-compose.yml, not at DAG parse time:
+# parsing must not require a live, migrated metadata DB (breaks
+# tests/test_dag_integrity.py and any plain `dbt`/`pytest` invocation).
 DOWNLOAD_POOL = "gharchive_download_pool"
 MISSING_HOURS_DB = os.path.join(BRONZE_ROOT, "_control", "missing_hours.duckdb")
-
-
-def _ensure_pool() -> None:
-    from airflow.utils.session import create_session
-
-    with create_session() as session:
-        if not Pool.get_pool(DOWNLOAD_POOL, session=session):
-            session.add(
-                Pool(
-                    pool=DOWNLOAD_POOL,
-                    slots=MAX_CONCURRENT_DOWNLOADS,
-                    description="caps concurrent GH Archive downloads during backfill",
-                )
-            )
-
-
-_ensure_pool()
 
 with DAG(
     dag_id="gharchive_ingest",
@@ -79,11 +63,14 @@ with DAG(
 
 
 def _write_partition_atomically(raw_gz_path: str, partition_dir: str) -> None:
-    tmp_dir = partition_dir + ".tmp"
-    os.makedirs(os.path.dirname(tmp_dir) or ".", exist_ok=True)
-    if os.path.exists(tmp_dir):
-        _rmtree(tmp_dir)
-    os.makedirs(tmp_dir, exist_ok=True)
+    # os.replace is only atomic at the file level (a directory-to-directory
+    # replace can't be done without a brief window where the target is
+    # missing, since POSIX rename requires an empty or absent directory
+    # target). Each hour is exactly one file, so write under a temp name
+    # and rename just that file into place.
+    os.makedirs(partition_dir, exist_ok=True)
+    tmp_path = os.path.join(partition_dir, ".part-0.parquet.tmp")
+    final_path = os.path.join(partition_dir, "part-0.parquet")
 
     con = duckdb.connect()
     try:
@@ -101,20 +88,12 @@ def _write_partition_atomically(raw_gz_path: str, partition_dir: str) -> None:
                 from read_json(?, format='newline_delimited', union_by_name=true)
             ) to ? (format parquet, compression zstd)
             """,
-            [raw_gz_path, os.path.join(tmp_dir, "part-0.parquet")],
+            [raw_gz_path, tmp_path],
         )
     finally:
         con.close()
 
-    if os.path.exists(partition_dir):
-        _rmtree(partition_dir)
-    os.replace(tmp_dir, partition_dir)
-
-
-def _rmtree(path: str) -> None:
-    import shutil
-
-    shutil.rmtree(path, ignore_errors=True)
+    os.replace(tmp_path, final_path)
 
 
 def _record_missing_hour(dt: str, hour: int, reason: str, detail: str) -> None:

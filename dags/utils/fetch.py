@@ -31,7 +31,9 @@ def gharchive_url(dt: str, hour: int, base_url: str = GHARCHIVE_BASE_URL) -> str
     return f"{base_url}/{dt}-{hour}.json.gz"
 
 
-def fetch_hour(dt: str, hour: int, dest_dir: str, base_url: str = GHARCHIVE_BASE_URL) -> FetchResult:
+def fetch_hour(
+    dt: str, hour: int, dest_dir: str, base_url: str = GHARCHIVE_BASE_URL
+) -> FetchResult:
     url = gharchive_url(dt, hour, base_url)
     last_exc: Exception | None = None
 

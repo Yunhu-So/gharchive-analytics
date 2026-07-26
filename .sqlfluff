@@ -1,7 +1,13 @@
 [sqlfluff]
 templater = dbt
 dialect = duckdb
-exclude_rules = L034
+max_line_length = 110
+# RF03/RF04: DuckDB struct field access (actor.login) reads as a qualified
+# column reference to sqlfluff, which can't distinguish it from
+# table-qualification, so the "consistency" and "keyword" checks produce
+# false positives on this project's event schema. ST09/LT09: stylistic
+# preferences that don't reflect a defect.
+exclude_rules = RF03, RF04, ST09, LT09
 
 [sqlfluff:templater:dbt]
 project_dir = dbt

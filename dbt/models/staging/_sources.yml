@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: bronze
+    meta:
+      external_location: "read_parquet('{{ env_var('BRONZE_PATH', var('bronze_path')) }}/dt=*/hour=*/*.parquet', hive_partitioning=true, union_by_name=true)"
+    tables:
+      - name: events
+        description: >
+          Raw GH Archive events landed by the ingest DAG. One row per event,
+          typed common columns (id, type, actor, repo, org, created_at) plus
+          payload as an unparsed JSON string.

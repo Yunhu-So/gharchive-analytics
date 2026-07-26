@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: stg_gh__pull_request_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: action
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["opened", "closed", "reopened", "edited", "assigned", "unassigned",
+                         "review_requested", "review_request_removed", "labeled", "unlabeled",
+                         "synchronize", "ready_for_review", "converted_to_draft", "locked", "unlocked",
+                         "auto_merge_enabled", "auto_merge_disabled", "milestoned", "demilestoned"]
+              config:
+                severity: warn
+
+  - name: stg_gh__pull_request_review_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_gh__pull_request_review_comment_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_gh__issue_comment_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_gh__push_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_gh__watch_events
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null

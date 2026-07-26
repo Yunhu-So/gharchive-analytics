@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import os
 
-from cosmos import DbtDag, ProjectConfig, ProfileConfig, RenderConfig, ExecutionConfig
+from cosmos import DbtDag, ExecutionConfig, ProfileConfig, ProjectConfig, RenderConfig
 from cosmos.constants import LoadMode
-
 from utils.constants import BRONZE_ASSET
 
 DBT_PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "dbt")
