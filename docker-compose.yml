@@ -9,6 +9,8 @@ x-airflow-common: &airflow-common
     AIRFLOW_UID: "${AIRFLOW_UID:-50000}"
     DUCKDB_PATH: /opt/airflow/data/gharchive.duckdb
     DBT_PROFILES_DIR: /opt/airflow/dbt
+    BRONZE_ROOT: /opt/airflow/data/bronze
+    BRONZE_PATH: /opt/airflow/data/bronze
     GHARCHIVE_BASE_URL: "${GHARCHIVE_BASE_URL:-https://data.gharchive.org}"
     GHARCHIVE_MAX_CONCURRENT_DOWNLOADS: "${GHARCHIVE_MAX_CONCURRENT_DOWNLOADS:-8}"
     GHARCHIVE_LOOKBACK_DAYS: "${GHARCHIVE_LOOKBACK_DAYS:-90}"

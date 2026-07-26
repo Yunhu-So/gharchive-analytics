@@ -32,7 +32,7 @@ lint:
 	$(VENV)/sqlfluff lint dbt/models dbt/snapshots
 
 test:
-	$(VENV)/pytest tests/
+	AIRFLOW__COSMOS__ENABLE_CACHE=False $(VENV)/pytest tests/
 
 dbt-build:
 	cd dbt && DUCKDB_PATH=../gharchive.duckdb ../$(VENV)/dbt build

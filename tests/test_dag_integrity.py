@@ -26,4 +26,4 @@ def test_dag_module_imports_without_error(module_name):
 def test_dag_has_no_cycles(module_name):
     module = importlib.import_module(module_name)
     dag = module.dag
-    dag.test_cycle()
+    dag.check_cycle()

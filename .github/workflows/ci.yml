@@ -47,3 +47,5 @@ jobs:
 
       - name: dag integrity
         run: pytest tests/test_dag_integrity.py -v
+        env:
+          AIRFLOW__COSMOS__ENABLE_CACHE: "False"

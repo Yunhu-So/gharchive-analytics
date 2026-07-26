@@ -5,8 +5,7 @@ import os
 from datetime import datetime, timedelta
 
 import duckdb
-from airflow.decorators import task
-from airflow.sdk import DAG
+from airflow.sdk import DAG, task
 from utils.constants import BRONZE_ASSET, BRONZE_ROOT, MAX_CONCURRENT_DOWNLOADS
 from utils.fetch import MissingHourError, fetch_hour
 
