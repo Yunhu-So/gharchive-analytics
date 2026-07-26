@@ -1,0 +1,42 @@
+name: slim-ci
+
+on:
+  pull_request:
+    paths:
+      - "dbt/**"
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  slim-dbt-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install project dependencies
+        run: pip install dbt-core==1.10.* dbt-duckdb
+
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+
+      - name: restore manifest from main
+        run: git show origin/main:dbt/target/manifest.json > dbt/state_manifest.json || echo "no baseline manifest yet"
+
+      - name: dbt build state:modified+
+        working-directory: dbt
+        run: |
+          if [ -f state_manifest.json ]; then
+            dbt build --target dev --select state:modified+ --state .
+          else
+            dbt build --target dev
+          fi
+        env:
+          DUCKDB_PATH: ../slim-ci.duckdb

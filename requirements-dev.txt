@@ -1,0 +1,11 @@
+dbt-core==1.10.*
+dbt-duckdb
+dbt-bigquery
+duckdb
+pyarrow
+requests
+ruff
+sqlfluff
+sqlfluff-templater-dbt
+pytest
+astronomer-cosmos

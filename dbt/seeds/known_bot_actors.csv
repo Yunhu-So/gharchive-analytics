@@ -1,0 +1,14 @@
+login,reason
+dependabot,pre-app-era automation account that later became a GitHub App
+dependabot-preview,predecessor to dependabot[bot]
+renovate,dependency update bot that ran as an ordinary user before the App era
+greenkeeper,legacy dependency update bot
+snyk-bot,security scanning bot
+codecov,coverage reporting bot
+coveralls,coverage reporting bot
+travis-ci,legacy CI bot commenting on PRs
+mergify,merge automation bot
+allcontributors,contributor recognition bot
+imgbot,image compression bot
+pyup-bot,python dependency update bot
+stale,stale issue/PR management bot

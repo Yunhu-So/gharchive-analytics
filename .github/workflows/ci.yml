@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  AIRFLOW_VERSION: "3.3.0"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install airflow
+        run: |
+          pip install "apache-airflow==${AIRFLOW_VERSION}" \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+
+      - name: install project dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: ruff
+        run: ruff check dags tests
+
+      - name: sqlfluff
+        run: sqlfluff lint dbt/models dbt/snapshots
+        env:
+          SQLFLUFF_DBT_PROFILES_DIR: dbt
+
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+
+      - name: dbt build (duckdb)
+        working-directory: dbt
+        run: dbt build --target dev
+        env:
+          DUCKDB_PATH: ../ci.duckdb
+
+      - name: dag integrity
+        run: pytest tests/test_dag_integrity.py -v

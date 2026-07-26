@@ -1,0 +1,13 @@
+[sqlfluff]
+templater = dbt
+dialect = duckdb
+exclude_rules = L034
+
+[sqlfluff:templater:dbt]
+project_dir = dbt
+profiles_dir = dbt
+profile = gharchive
+target = dev
+
+[sqlfluff:indentation]
+tab_space_size = 4
