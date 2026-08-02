@@ -13,6 +13,30 @@ import duckdb
 BRONZE_PATH = os.environ.get("BRONZE_PATH", "bronze")
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "event_type_coverage.md")
 
+# GitHub's current Events API type list (docs.github.com/en/developers/webhooks-and-events/
+# github-event-types). Some of these were added well after 2011 (PullRequestReviewEvent
+# shipped with GitHub's 2016 formal-review-UI launch); a type present here but absent from
+# a given ingested range is expected, not a data gap, if the range predates its launch.
+KNOWN_EVENT_TYPES = {
+    "CommitCommentEvent",
+    "CreateEvent",
+    "DeleteEvent",
+    "ForkEvent",
+    "GollumEvent",
+    "IssueCommentEvent",
+    "IssuesEvent",
+    "MemberEvent",
+    "PublicEvent",
+    "PullRequestEvent",
+    "PullRequestReviewEvent",
+    "PullRequestReviewCommentEvent",
+    "PullRequestReviewThreadEvent",
+    "PushEvent",
+    "ReleaseEvent",
+    "SponsorshipEvent",
+    "WatchEvent",
+}
+
 
 def main() -> None:
     con = duckdb.connect()
@@ -57,6 +81,23 @@ def main() -> None:
         "type's absence would misread instrumentation change as a real "
         "trend (see README caveats and section 7.3 of the build brief).",
     ]
+
+    missing_types = sorted(KNOWN_EVENT_TYPES - {type_ for type_, *_ in rows})
+    if missing_types:
+        lines += [
+            "",
+            "## Known event types absent from this range",
+            "",
+            "Zero events of these types appear anywhere in the ingested "
+            "range above. For a type that launched after this range's end "
+            "(e.g. PullRequestReviewEvent, which GitHub introduced with its "
+            "2016 formal-review UI), this is expected, not a gap -- confirm "
+            "against GitHub's own type history before treating it as one:",
+            "",
+        ]
+        lines += [f"- {type_}" for type_ in missing_types]
+
+    lines += [""]
 
     with open(OUTPUT_PATH, "w") as f:
         f.write("\n".join(lines) + "\n")
