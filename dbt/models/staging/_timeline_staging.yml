@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: stg_timeline__events
+    description: "one-month Timeline API adapter demonstration (ADR 004), not used by any mart"
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: type
+        tests:
+          - not_null
