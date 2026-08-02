@@ -40,21 +40,30 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: restore manifest from main
+      # both the manifest (for state:modified+ to diff against) and the
+      # actual warehouse file (so unchanged tables it decides not to
+      # rebuild, like the known_bot_actors seed, already exist) are
+      # needed: a fresh CI runner starts with neither.
+      - name: restore dbt state from main
         if: steps.find-run.outputs.run_id != ''
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: dbt-manifest-main
-          path: dbt/state_manifest
+          name: dbt-state-main
+          path: dbt/state_main
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ steps.find-run.outputs.run_id }}
 
+      # upload-artifact preserves the repo-root-relative paths it was given
+      # (dbt/target/manifest.json, ci.duckdb), so downloading into
+      # dbt/state_main nests them at dbt/state_main/dbt/target/... and
+      # dbt/state_main/ci.duckdb.
       - name: dbt build state:modified+
         working-directory: dbt
         run: |
-          if [ -f state_manifest/manifest.json ]; then
-            dbt build --target dev --select state:modified+ --exclude tag:timeline_demo --state state_manifest
+          if [ -f state_main/dbt/target/manifest.json ]; then
+            cp state_main/ci.duckdb ../slim-ci.duckdb
+            dbt build --target dev --select state:modified+ --exclude tag:timeline_demo --state state_main/dbt/target
           else
             dbt build --target dev --exclude tag:timeline_demo
           fi
