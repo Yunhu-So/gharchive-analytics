@@ -83,16 +83,20 @@ Sandbox tables auto-expire after 60 days.
 ## Backfill status
 
 As of this writing the ingest DAG has been running against the real
-`data.gharchive.org` source (not a fixture) since 2015-01-01, with a 3-year
-target (through 2017-12-31). Real numbers so far:
+`data.gharchive.org` source (not a fixture) since 2015-01-01. The original
+target was three years (through 2017-12-31); at the observed ~370 MB/day
+bronze growth rate, that would need roughly 400 GB, more than this laptop
+has free alongside everything else on it, so the target was cut back to
+one full year (through 2015-12-31) rather than run out of disk mid-backfill.
+Real numbers so far:
 
 | metric | value |
 |---|---|
-| days successfully ingested | 40 (2015-01-01 through 2015-02-09) |
-| events ingested | 17,306,657 |
-| bronze size on disk | 15 GB |
+| days successfully ingested | 70 (2015-01-01 through 2015-03-11) |
+| events ingested | 34,270,548 |
+| bronze size on disk | 25 GB |
 | genuine missing hours (real 404s) | 0 — GH Archive has no gaps in this range |
-| wall-clock so far | roughly 1 hour, at ~40-100 sec/day depending on load |
+| wall-clock so far | ~94 min of active ingestion (excludes a deliberate pause), at ~80 sec/day |
 
 This table will be updated as the backfill continues; the pipeline, dbt
 build, and tests are all already verified against the data ingested so far
