@@ -46,16 +46,20 @@ jobs:
           DUCKDB_PATH: ../ci.duckdb
           BRONZE_PATH: ../tests/fixtures/sample_bronze
 
-      # slim-ci.yml diffs pull requests against this: dbt/target is
-      # gitignored, so `git show origin/main:dbt/target/manifest.json`
-      # can never find it. An uploaded artifact from main's own build is
-      # the only place a baseline manifest can come from.
-      - name: upload dbt manifest for slim-ci
+      # slim-ci.yml diffs pull requests against these. dbt/target is
+      # gitignored, so a manifest alone isn't enough either: state:modified+
+      # only rebuilds changed nodes, so unchanged tables (like the
+      # known_bot_actors seed) need to already exist in the target
+      # warehouse it runs against. On a fresh CI runner, nothing exists
+      # unless main's own warehouse file is restored first.
+      - name: upload dbt state for slim-ci
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: dbt-manifest-main
-          path: dbt/target/manifest.json
+          name: dbt-state-main
+          path: |
+            dbt/target/manifest.json
+            ci.duckdb
           retention-days: 30
 
       - name: dag integrity
