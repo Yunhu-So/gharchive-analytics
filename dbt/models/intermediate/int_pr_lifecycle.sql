@@ -66,7 +66,7 @@ review_candidates as (
     where
         not is_bot_actor
         and reviewer_id is not null
-        {% if is_incremental() %}
+    {% if is_incremental() %}
             and reviewed_at >= current_timestamp
                 - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
         {% endif %}
@@ -78,7 +78,7 @@ review_candidates as (
     where
         not is_bot_actor
         and commenter_id is not null
-        {% if is_incremental() %}
+    {% if is_incremental() %}
             and commented_at >= current_timestamp
                 - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
         {% endif %}
@@ -91,7 +91,7 @@ review_candidates as (
         not is_bot_actor
         and is_pr_comment
         and commenter_id is not null
-        {% if is_incremental() %}
+    {% if is_incremental() %}
             and commented_at >= current_timestamp
                 - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
         {% endif %}

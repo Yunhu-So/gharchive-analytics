@@ -5,6 +5,10 @@
 
 {{ config(tags=['timeline_demo']) }}
 
+with events as (
+    select * from {{ source('bronze_timeline', 'events') }}
+)
+
 select
     id as event_id,
     type,
@@ -13,4 +17,4 @@ select
     repo.name as repo_name,
     created_at as event_created_at,
     payload
-from {{ source('bronze_timeline', 'events') }}
+from events
