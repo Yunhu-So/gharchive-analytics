@@ -46,6 +46,18 @@ jobs:
           DUCKDB_PATH: ../ci.duckdb
           BRONZE_PATH: ../tests/fixtures/sample_bronze
 
+      # slim-ci.yml diffs pull requests against this: dbt/target is
+      # gitignored, so `git show origin/main:dbt/target/manifest.json`
+      # can never find it. An uploaded artifact from main's own build is
+      # the only place a baseline manifest can come from.
+      - name: upload dbt manifest for slim-ci
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-manifest-main
+          path: dbt/target/manifest.json
+          retention-days: 30
+
       - name: dag integrity
         run: pytest tests/test_dag_integrity.py -v
         env:
