@@ -2,7 +2,6 @@ from __future__ import annotations
 
 # mentions "airflow" deliberately: DAG_DISCOVERY_SAFE_MODE skips files that
 # don't, and this one has no direct airflow import to satisfy it otherwise
-
 import os
 
 from cosmos import DbtDag, ExecutionConfig, ProfileConfig, ProjectConfig, RenderConfig
