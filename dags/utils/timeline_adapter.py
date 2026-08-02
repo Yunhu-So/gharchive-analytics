@@ -52,9 +52,12 @@ def _ingest_hour(dt: str, hour: int, dest_root: str) -> None:
             f"""
             copy (
                 select
-                    -- the Timeline API has no event id at all: synthesize a
-                    -- stable one from fields that together identify an event.
-                    md5(created_at::varchar || actor || url) as id,
+                    -- the Timeline API has no event id at all: synthesize
+                    -- one from fields that together identify an event.
+                    -- created_at/actor/url alone collide often (many
+                    -- events from the same actor to the same url within
+                    -- the same second), so the payload is included too.
+                    md5(created_at::varchar || actor || url || to_json(payload)) as id,
                     type,
                     struct_pack(id := NULL::bigint, login := actor) as actor,
                     struct_pack(

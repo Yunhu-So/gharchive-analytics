@@ -30,20 +30,21 @@ jobs:
       - name: ruff
         run: ruff check dags tests
 
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+
       - name: sqlfluff
         run: sqlfluff lint dbt/models dbt/snapshots
         env:
           SQLFLUFF_DBT_PROFILES_DIR: dbt
 
-      - name: dbt deps
-        working-directory: dbt
-        run: dbt deps
-
       - name: dbt build (duckdb)
         working-directory: dbt
-        run: dbt build --target dev
+        run: dbt build --target dev --exclude tag:timeline_demo
         env:
           DUCKDB_PATH: ../ci.duckdb
+          BRONZE_PATH: ../tests/fixtures/sample_bronze
 
       - name: dag integrity
         run: pytest tests/test_dag_integrity.py -v

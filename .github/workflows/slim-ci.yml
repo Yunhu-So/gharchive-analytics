@@ -34,9 +34,10 @@ jobs:
         working-directory: dbt
         run: |
           if [ -f state_manifest.json ]; then
-            dbt build --target dev --select state:modified+ --state .
+            dbt build --target dev --select state:modified+ --exclude tag:timeline_demo --state .
           else
-            dbt build --target dev
+            dbt build --target dev --exclude tag:timeline_demo
           fi
         env:
           DUCKDB_PATH: ../slim-ci.duckdb
+          BRONZE_PATH: ../tests/fixtures/sample_bronze

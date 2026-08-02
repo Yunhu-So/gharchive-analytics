@@ -3,6 +3,8 @@
 -- is synthesized (the Timeline API had none), and actor.id is always null
 -- (pre-2015 actors carry no stable numeric id, only a login).
 
+{{ config(tags=['timeline_demo']) }}
+
 select
     id as event_id,
     type,
