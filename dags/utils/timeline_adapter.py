@@ -57,7 +57,12 @@ def _ingest_hour(dt: str, hour: int, dest_root: str) -> None:
                     -- created_at/actor/url alone collide often (many
                     -- events from the same actor to the same url within
                     -- the same second), so the payload is included too.
-                    md5(created_at::varchar || actor || url || to_json(payload)) as id,
+                    -- to_json(NULL) is NULL, not the string "null" (e.g.
+                    -- PublicEvent carries no payload at all), which would
+                    -- otherwise poison the whole concatenation.
+                    md5(
+                        created_at::varchar || actor || url || coalesce(to_json(payload), 'null')
+                    ) as id,
                     type,
                     struct_pack(id := NULL::bigint, login := actor) as actor,
                     struct_pack(

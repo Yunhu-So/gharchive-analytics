@@ -27,14 +27,34 @@ jobs:
         working-directory: dbt
         run: dbt deps
 
+      # dbt/target is gitignored, so there is no committed manifest to
+      # diff against; ci.yml uploads one from its own build on every push
+      # to main, which is the only place a baseline can come from. A
+      # pull request opened before main has ever built one won't find it,
+      # hence continue-on-error and the plain file-existence fallback below.
+      - name: find latest main ci run
+        id: find-run
+        run: |
+          run_id=$(gh run list --workflow=ci.yml --branch=main --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: restore manifest from main
-        run: git show origin/main:dbt/target/manifest.json > dbt/state_manifest.json || echo "no baseline manifest yet"
+        if: steps.find-run.outputs.run_id != ''
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: dbt-manifest-main
+          path: dbt/state_manifest
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.find-run.outputs.run_id }}
 
       - name: dbt build state:modified+
         working-directory: dbt
         run: |
-          if [ -f state_manifest.json ]; then
-            dbt build --target dev --select state:modified+ --exclude tag:timeline_demo --state .
+          if [ -f state_manifest/manifest.json ]; then
+            dbt build --target dev --select state:modified+ --exclude tag:timeline_demo --state state_manifest
           else
             dbt build --target dev --exclude tag:timeline_demo
           fi
