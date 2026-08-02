@@ -40,3 +40,4 @@ jobs:
           fi
         env:
           DUCKDB_PATH: ../slim-ci.duckdb
+          BRONZE_PATH: ../tests/fixtures/sample_bronze
