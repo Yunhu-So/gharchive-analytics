@@ -5,18 +5,24 @@
 `int_pr_lifecycle` is materialized incrementally, keyed on `unique_key =
 (repo_id, pr_number)`. On each incremental run it reprocesses:
 
-- every PR opened within the current run's partition, and
-- every PR still open (not closed or merged) whose `opened_at` falls within
-  a configurable lookback window, default 90 days
-  (`var: pr_lifecycle_lookback_days`), read back from the already-built
-  intermediate table.
+- every PR newly opened since the last run, and
+- every PR already in the table that still lacks a `first_review_at`,
+  as long as it was opened within `pr_lifecycle_max_age_days` (default 365)
+  of now.
 
-A PR drops out of the reprocessing set once it is closed/merged, or once it
-exceeds a max-age cutoff (`var: pr_lifecycle_max_age_days`, default 365),
-whichever comes first. Max-age exists so a PR left open indefinitely does not
-force an unbounded lookback scan forever; past that age its lifecycle is
-treated as final even if a review lands later. This is a deliberate accuracy
-tradeoff, not an oversight.
+A PR drops out of the reprocessing set once it has a `first_review_at`, or
+once it exceeds the max-age cutoff, whichever comes first. Max-age exists so
+a PR left open indefinitely does not force this model to rescan it forever;
+past that age its lifecycle is treated as final even if a review lands
+later. This is a deliberate accuracy tradeoff, not an oversight.
+
+`pr_lifecycle_lookback_days` (default 90) is a second, narrower knob: it
+bounds how far back the model scans review/comment events when computing
+`first_review_at` for the reprocessing set, as a safety margin beyond
+`max_age_days` against clock skew rather than a second eligibility gate.
+Eligibility itself is governed by `max_age_days` alone — a PR is either
+still being watched for its first review or it has aged out; there is no
+window where it is watched only sometimes.
 
 ## Why a lookback window at all
 

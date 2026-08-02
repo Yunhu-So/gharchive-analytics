@@ -27,8 +27,6 @@ models:
     intermediate:
       +materialized: view
       +schema: intermediate
-      int_pr_lifecycle:
-        +materialized: incremental
     marts:
       +materialized: table
       +schema: marts
