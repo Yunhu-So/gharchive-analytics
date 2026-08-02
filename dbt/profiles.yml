@@ -4,9 +4,19 @@ gharchive:
     dev:
       type: duckdb
       path: "{{ env_var('DUCKDB_PATH', '../gharchive.duckdb') }}"
-      threads: 4
+      threads: "{{ env_var('DUCKDB_THREADS', '2') | int }}"
       extensions:
         - httpfs
+      settings:
+        memory_limit: "{{ env_var('DUCKDB_MEMORY_LIMIT', '4GB') }}"
+        # top-level `threads:` above only controls dbt's model concurrency;
+        # duckdb's own internal query engine parallelism is unrelated and
+        # defaults to using every available core unless set here explicitly.
+        # a wide union of windowed views run with full core parallelism can
+        # blow past a `memory_limit` several times its intended size, since
+        # each thread buffers its own intermediate state.
+        threads: "{{ env_var('DUCKDB_THREADS', '2') | int }}"
+        preserve_insertion_order: false
     prod:
       type: bigquery
       method: oauth

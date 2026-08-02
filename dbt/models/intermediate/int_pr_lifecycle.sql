@@ -7,6 +7,38 @@
     )
 }}
 
+{#-
+    section 7.5's uncertainty cutoff only needs the single earliest
+    event_created_at value ever seen. Computed once here via run_query
+    (a compile-time roundtrip) rather than as a `data_start` CTE in the
+    query below: on duckdb, adding that CTE back -- even as a plain
+    aggregate with no window function of its own, cross joined instead of
+    correlated -- reproduces the same multi-GB-regardless-of-limit OOM as
+    int_review_candidates did (see that model's note); this whole query
+    shape is fragile to any extra CTE that touches the staging views a
+    second time. A single scalar known before the query runs sidesteps it
+    rather than chasing yet another materialization workaround.
+
+    Guarded on the source relation actually existing: sqlfluff (and plain
+    `dbt compile`) render this model without ever running the DAG, so the
+    staging view this queries hasn't been created yet in that context.
+    Falling back to a placeholder there is fine -- lint only checks that
+    the rendered SQL is syntactically valid, not this literal's value.
+-#}
+{% set stg_pr_events = ref('stg_gh__pull_request_events') %}
+{% set stg_pr_events_relation = (
+    adapter.get_relation(stg_pr_events.database, stg_pr_events.schema, stg_pr_events.identifier)
+    if execute else none
+) %}
+{% if stg_pr_events_relation %}
+    {% set min_created_at_query %}
+        select min(event_created_at) as min_created_at from {{ stg_pr_events }}
+    {% endset %}
+    {% set min_created_at = run_query(min_created_at_query).columns[0].values()[0] %}
+{% else %}
+    {% set min_created_at = '1970-01-01' %}
+{% endif %}
+
 with all_pr_opens as (
     select
         repo_id,
@@ -58,43 +90,19 @@ first_time_pr_opens as (
 ),
 
 -- section 7.1: first review/comment can be a formal review, a line-level
--- review comment, or a plain PR conversation comment (IssueCommentEvent
--- where the issue is actually a pull request).
+-- review comment, or a plain PR conversation comment. Sourced from
+-- int_review_candidates (its own model, not a CTE here) because DuckDB's
+-- optimizer blows past multi-GB memory limits in under a second when that
+-- union of three windowed staging views feeds straight into the
+-- inequality-predicate join below; materializing it as a real table first
+-- is what fixes it. See int_review_candidates.sql for the full note.
 review_candidates as (
-    select repo_id, pr_number, reviewer_id as responder_id, reviewed_at as responded_at
-    from {{ ref('stg_gh__pull_request_review_events') }}
-    where
-        not is_bot_actor
-        and reviewer_id is not null
+    select repo_id, pr_number, responder_id, responded_at
+    from {{ ref('int_review_candidates') }}
     {% if is_incremental() %}
-            and reviewed_at >= current_timestamp
-                - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
-        {% endif %}
-
-    union all
-
-    select repo_id, pr_number, commenter_id as responder_id, commented_at as responded_at
-    from {{ ref('stg_gh__pull_request_review_comment_events') }}
-    where
-        not is_bot_actor
-        and commenter_id is not null
-    {% if is_incremental() %}
-            and commented_at >= current_timestamp
-                - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
-        {% endif %}
-
-    union all
-
-    select repo_id, issue_number as pr_number, commenter_id as responder_id, commented_at as responded_at
-    from {{ ref('stg_gh__issue_comment_events') }}
-    where
-        not is_bot_actor
-        and is_pr_comment
-        and commenter_id is not null
-    {% if is_incremental() %}
-            and commented_at >= current_timestamp
-                - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
-        {% endif %}
+        where responded_at >= current_timestamp
+            - interval '{{ var("pr_lifecycle_max_age_days") + var("pr_lifecycle_lookback_days") }}' day
+    {% endif %}
 ),
 
 first_response as (
@@ -110,11 +118,6 @@ first_response as (
             and r.responder_id != o.pr_author_id
             and r.responded_at >= o.pr_created_at
     group by 1, 2
-),
-
-data_start as (
-    select min(event_created_at) as min_created_at
-    from {{ ref('stg_gh__pull_request_events') }}
 )
 
 select
@@ -132,7 +135,7 @@ select
     -- section 7.5: an actor whose first observed PR-open falls within the
     -- uncertainty window of the earliest data we have could have opened
     -- prior PRs before the backfill started; we have no way to know.
-    o.pr_created_at <= (select data_start.min_created_at from data_start)
+    o.pr_created_at <= timestamp '{{ min_created_at }}'
     + interval '{{ var("first_contributor_uncertainty_days") }}' day
         as is_first_contributor_uncertain
 from first_time_pr_opens as o

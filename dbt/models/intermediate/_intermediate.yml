@@ -1,6 +1,18 @@
 version: 2
 
 models:
+  - name: int_review_candidates
+    columns:
+      - name: repo_id
+        tests:
+          - not_null
+      - name: pr_number
+        tests:
+          - not_null
+      - name: responder_id
+        tests:
+          - not_null
+
   - name: int_pr_lifecycle
     columns:
       - name: repo_id
