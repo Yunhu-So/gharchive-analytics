@@ -41,5 +41,5 @@ dbt-test:
 	cd dbt && DUCKDB_PATH=../gharchive.duckdb ../$(VENV)/dbt test
 
 backfill:
-	docker compose exec airflow-apiserver airflow dags backfill gharchive_ingest \
-		--start-date $(START) --end-date $(END)
+	docker compose exec airflow-apiserver airflow backfill create \
+		--dag-id gharchive_ingest --from-date $(START) --to-date $(END)

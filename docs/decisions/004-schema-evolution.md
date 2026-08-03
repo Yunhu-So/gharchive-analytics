@@ -33,6 +33,22 @@ documented. The one-month adapter exists to prove the ingestion and staging
 pattern extends across the break, without committing to the accuracy work
 required to make pre-2015 data mart-eligible.
 
+## Implementation notes
+
+Fetched against real 2014-06 data (`dags/utils/timeline_adapter.py`, one
+month, run standalone rather than through `gharchive_ingest`). Two concrete
+differences from the Events API confirmed the schema break is real, not
+theoretical:
+
+- there is no event `id` at all; the adapter synthesizes one by hashing
+  `created_at || actor || url`, which can collide for two events from the
+  same actor to the same repo within the same second (a real, accepted
+  limitation of a bounded demo, not something worth engineering around)
+- `actor` is a bare login string with no stable numeric id (`actor_attributes`
+  carries login, name, company, etc., but never an id) — repos have one,
+  actors don't, which is itself informative about why identity tracking
+  across renames (ADR on snapshots) is a 2015+-only concern
+
 ## Consequence
 
 Any question about GitHub activity before 2015 is out of scope for this

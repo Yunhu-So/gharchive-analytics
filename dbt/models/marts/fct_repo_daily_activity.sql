@@ -1,3 +1,11 @@
+{{
+    config(
+        partition_by={'field': 'activity_date', 'data_type': 'date', 'granularity': 'day'}
+        if target.type == 'bigquery' else none,
+        cluster_by=['repo_id'] if target.type == 'bigquery' else none,
+    )
+}}
+
 with daily_events as (
     select repo_id, cast(event_created_at as date) as activity_date, 'push' as event_kind
     from {{ ref('stg_gh__push_events') }}

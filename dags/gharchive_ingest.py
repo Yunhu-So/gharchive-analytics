@@ -73,8 +73,14 @@ def _write_partition_atomically(raw_gz_path: str, partition_dir: str) -> None:
 
     con = duckdb.connect()
     try:
+        # DuckDB's COPY ... TO clause does not accept a bind parameter for
+        # the destination path (only table-function arguments like
+        # read_json(?, ...) do), so the destination is interpolated
+        # directly. Safe here: tmp_path is built from our own dt/hour
+        # values, never from external input.
+        escaped_tmp_path = tmp_path.replace("'", "''")
         con.execute(
-            """
+            f"""
             copy (
                 select
                     id,
@@ -85,9 +91,9 @@ def _write_partition_atomically(raw_gz_path: str, partition_dir: str) -> None:
                     created_at,
                     to_json(payload) as payload
                 from read_json(?, format='newline_delimited', union_by_name=true)
-            ) to ? (format parquet, compression zstd)
+            ) to '{escaped_tmp_path}' (format parquet, compression zstd)
             """,
-            [raw_gz_path, tmp_path],
+            [raw_gz_path],
         )
     finally:
         con.close()

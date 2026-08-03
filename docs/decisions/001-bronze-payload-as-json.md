@@ -29,3 +29,19 @@ Staging models pay a JSON-parsing cost on every read instead of once at
 ingest. Given hourly file sizes and the fact that staging models are views (not
 materialized), this cost is acceptable and is the standard bronze/silver
 tradeoff.
+
+Measured against the real backfill, that cost is concrete, not theoretical:
+`PullRequestEvent` payloads (which embed GitHub's full nested `pull_request`
+object) average 15.8 KB and run up to 254 KB. At ~1.17M rows for just that
+one event type across the first 40 days of 2015, reading `payload` alone is
+tens of GB of raw text — enough to OOM a `dbt build` at DuckDB's default
+memory settings, independent of row count, once discovered while validating
+the incremental/full-refresh equivalence test. Two things made this
+survivable rather than a reason to reconsider the decision:
+
+1. Filtering to `dt` (the hive partition column) before scanning, not just
+   `created_at` (a data column parquet can't prune files on) — the actual
+   forcing function; see ADR 002.
+2. Running DuckDB with a memory limit sized for the payload volume in play
+   (`dbt/profiles.yml`'s `settings.memory_limit`, overridable via
+   `DUCKDB_MEMORY_LIMIT`), not DuckDB's small default.

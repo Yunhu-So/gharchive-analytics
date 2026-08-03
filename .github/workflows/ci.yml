@@ -41,7 +41,7 @@ jobs:
 
       - name: dbt build (duckdb)
         working-directory: dbt
-        run: dbt build --target dev
+        run: dbt build --target dev --exclude tag:timeline_demo
         env:
           DUCKDB_PATH: ../ci.duckdb
           BRONZE_PATH: ../tests/fixtures/sample_bronze

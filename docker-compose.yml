@@ -6,6 +6,21 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__API__EXPOSE_CONFIG: "true"
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    # LocalExecutor forks worker processes; if that happens while the
+    # scheduler's log-server thread is already running, the fork can
+    # deadlock the child (reproduced consistently even against a fresh
+    # metadata DB, so it isn't data-dependent). spawn avoids inheriting
+    # thread state across the fork instead of copying it.
+    AIRFLOW__CORE__MP_START_METHOD: "spawn"
+    AIRFLOW__WORKERS__EXECUTION_API_SERVER_URL: "http://airflow-apiserver:8080/execution/"
+    # must be identical across every component: the apiserver signs task
+    # execution JWTs with this key and the scheduler/dag-processor/triggerer
+    # verify against it. Left unset, each container generates its own
+    # ephemeral key and no two components can talk to each other.
+    AIRFLOW__API__SECRET_KEY: "${AIRFLOW_SECRET_KEY:-60cbd419a9a6ce4ac6b98884a521147ad3c30127b9b9aa3b170a605f9dfaab86}"
+    # a second, independent secret from [api] secret_key: this is the one
+    # actually used to sign/verify task execution JWTs between components.
+    AIRFLOW__API_AUTH__JWT_SECRET: "${AIRFLOW_SECRET_KEY:-60cbd419a9a6ce4ac6b98884a521147ad3c30127b9b9aa3b170a605f9dfaab86}"
     AIRFLOW_UID: "${AIRFLOW_UID:-50000}"
     DUCKDB_PATH: /opt/airflow/data/gharchive.duckdb
     DBT_PROFILES_DIR: /opt/airflow/dbt

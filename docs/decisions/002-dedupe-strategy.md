@@ -32,3 +32,13 @@ Dedup happens once per staging model rather than once globally, so the same
 deliberate: staging models should not depend on each other, and the dedupe
 logic is cheap and mechanical enough that a shared macro (`dedupe_events`)
 in `dbt/macros/` is used instead of a shared model dependency.
+
+Filtering to the relevant `type` has to happen *before* `dedupe_events` runs,
+not after. Found the hard way at real backfill scale: `row_number() over
+(partition by id ...)` inside the macro forces a window-function pass over
+whatever relation it's given, so passing it the whole bronze source and
+filtering by `type` in the outer query means every staging model
+window-scans every event of every type, not just its own — six models each
+independently re-scanning the full multi-million-row bronze table. Each
+staging model now filters into a `base` CTE first and only dedupes that
+already-narrowed result.
