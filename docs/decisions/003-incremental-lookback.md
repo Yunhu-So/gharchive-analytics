@@ -89,3 +89,23 @@ an already-captured review or comment ever needs revisiting. The
 one layer out -- as a filter over `int_review_candidates` inside
 `int_pr_lifecycle`'s `review_candidates` CTE -- so the cost-bounding
 property this ADR describes is unchanged.
+
+## Addendum: pr_number, not just pr_created_at, breaks ties in author_repo_pr_seq
+
+`all_pr_opens` ranks a repo's PRs per author with `row_number() over
+(partition by repo_id, pr_author_id order by pr_created_at)` to find each
+author's first PR in that repo. GH Archive timestamps only resolve to the
+second, and a repo opening PRs fast enough -- bulk automation, a mirrored
+repo -- can genuinely tie two different PRs by the same author to the same
+second; this happened for real in the backfill (PRs #4 and #5 in the same
+repo, same author, same second). Without a second sort key, which of the
+two `row_number()` calls "first" is whatever the query engine's scan order
+happens to produce, and that order is not guaranteed to be the same between
+a full-refresh run and an incremental run of the identical logical query --
+caught by the row-for-row parity test in Verification above actually
+failing at real backfill scale, not by inspection. `pr_number` is assigned
+by GitHub in true creation order, so ordering by `(pr_created_at,
+pr_number)` isn't just a deterministic tiebreak, it's the correct one.
+`assert_first_time_pr_is_earliest` guards this directly: it fails if any
+row in `int_pr_lifecycle` isn't actually its author's earliest PR in that
+repo by that same ordering.

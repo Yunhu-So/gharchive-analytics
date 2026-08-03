@@ -48,9 +48,19 @@ with all_pr_opens as (
         pr_created_at,
         pr_closed_at,
         pr_merged_at,
+        -- pr_number as a tiebreaker, not just pr_created_at: GitHub's event
+        -- timestamps only resolve to the second, and a repo opening many PRs
+        -- fast (bulk automation, a mirrored repo) can genuinely tie two PRs
+        -- by the same author to the same second. Without a deterministic
+        -- tiebreak, row_number() can pick either row as "first" depending on
+        -- scan order, which differs between a full-refresh and an
+        -- incremental run of the identical logical query and produces a
+        -- different is_first_time_contributor row each time. pr_number is
+        -- assigned sequentially by GitHub in true creation order, so it's
+        -- not just deterministic but the semantically correct tiebreak.
         row_number() over (
             partition by repo_id, pr_author_id
-            order by pr_created_at
+            order by pr_created_at, pr_number
         ) as author_repo_pr_seq
     from {{ ref('stg_gh__pull_request_events') }}
     where

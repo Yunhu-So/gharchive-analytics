@@ -3,11 +3,7 @@ with pr_opens as (
         repo_id,
         pr_author_id,
         pr_author_login,
-        pr_created_at,
-        row_number() over (
-            partition by repo_id, pr_author_id
-            order by pr_created_at
-        ) as author_repo_pr_seq
+        pr_created_at
     from {{ ref('stg_gh__pull_request_events') }}
     where
         action = 'opened'
