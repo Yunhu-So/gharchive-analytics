@@ -82,28 +82,33 @@ Sandbox tables auto-expire after 60 days.
 
 ## Backfill status
 
-As of this writing the ingest DAG has been running against the real
-`data.gharchive.org` source (not a fixture) since 2015-01-01. The original
-target was three years (through 2017-12-31); at the observed ~370 MB/day
-bronze growth rate, that would need roughly 400 GB, more than this laptop
-has free alongside everything else on it, so the target was cut back to
-one full year (through 2015-12-31) rather than run out of disk mid-backfill.
-Real numbers so far:
+The ingest DAG ran against the real `data.gharchive.org` source (not a
+fixture) from 2015-01-01, and was deliberately capped once it comfortably
+passed 100M real ingested events rather than run an open-ended multi-year
+backfill. That scope was a conscious choice, not a limitation reached by
+accident: 100M+ events is enough real volume to prove the pipeline's
+correctness and surface genuine scale problems (see the bugs below), without
+the several-hundred-GB footprint a full 2015&ndash;2017 run would need on a
+single laptop. `gharchive_ingest` is paused at this point; nothing about the
+DAG, the pool, or the atomic-write logic changes if it were unpaused and
+pointed at a longer window later.
+
+Final numbers:
 
 | metric | value |
 |---|---|
-| days successfully ingested | 70 (2015-01-01 through 2015-03-11) |
-| events ingested | 34,270,548 |
-| bronze size on disk | 25 GB |
+| days successfully ingested | 261 (2015-01-01 through 2015-09-18) |
+| events ingested | 143,162,505 |
+| bronze size on disk | ~95 GB |
 | genuine missing hours (real 404s) | 0 — GH Archive has no gaps in this range |
-| wall-clock so far | ~94 min of active ingestion (excludes a deliberate pause), at ~80 sec/day |
+| wall-clock, active ingestion | ~6 hours (excludes a deliberate mid-run pause) |
 
-This table will be updated as the backfill continues; the pipeline, dbt
-build, and tests are all already verified against the data ingested so far
-(see the PR history for the bugs that surfaced and were fixed along the way:
-a DuckDB parameterized-path bug, an Airflow scheduler fork/thread deadlock,
-and a JWT secret mismatch between containers, none of which are visible
-running dbt or pytest in isolation — only the live pipeline caught them).
+The pipeline, dbt build, and tests are all verified against this data (see
+the PR history for the bugs that surfaced and were fixed along the way: a
+DuckDB parameterized-path bug, an Airflow scheduler fork/thread deadlock, a
+JWT secret mismatch between containers, and a DuckDB query-planner OOM,
+none of which were visible running dbt or pytest in isolation &mdash; only
+the live pipeline at real scale caught them).
 
 ## What I'd do differently at scale
 
